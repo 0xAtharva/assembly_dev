@@ -1,26 +1,133 @@
-/////////////////////////////////////////////////////////////////////////////////////////
-/////////////////////////////////////////////////////////////////////////////////////////
+/*
+1. bits 
+    1. a single transistor thats on(1) or off(0)
+    2. bit is the smallest piece of information in computer architecture 
 
-// execution --------------------------------------------------------------------------//
-// 1. opcodes
-// - area, operation, params(location, value), output
 
-// 2. area
-// - storage, memory, stack, calldata
-// - yul manages stack for us, devs manage memory and storage
 
-// 3. operations
-// - (load, return), (store, push), (arithmetic), (context)
+2. bytes
+    1. a group of 8 transistors
+    2. this group of transistors together represent a certain character.
+    3. byte is the fundamental unit of data in computers
 
-// 4. params
-// - 'location' is mostly provided 
-// - 'value' is provided for write operations
 
-// yul --------------------------------------------------------------------------------//
-// 1. about
-// - can be helpful for directly control over memory and storage
-// - easily inlined with solidity
-// - great for optimizing gas. 
+
+3. words
+    1. a group of 32 bytes
+    2. EVM operates on words
+
+
+
+4. endian formats
+    1. the order in which bytes are arranged within larger datatypes in computer memory
+    2. big-endian : english way  ,      little-endian : arabic way
+    3. EVM operates on 32 byte words, which are stored in big-endian format
+
+
+
+5. character encodings
+    1. an encoding scheme to represent characters ASCII, UTF-8
+
+
+
+6. datatypes
+    1. strict containers for data that maintain sanity in the code
+    2. a certain size
+    3. a certain interpretation
+    4. bundled methods
+
+
+
+7. floating points in computers
+            base 10 : 1000   100   10   1   1/10   1/100   1/1000
+            base 2  :   8     4    2    1    1/2    1/4     1/8
+    1. computers are naturally base 2 (transistors can only be On/Off)
+    2. representing base 10 decimals with underlying as base 2 is tricky. Computers need to
+    construct base 10 decimals using base 2 components and there are unexpected decimal
+    arithmetic outputs in computers so solidity has got rid of floats.
+    3. To mimic decimal behaviour just use scaled values by the required decimal places you need
+
+
+
+8. overflow underflow
+    1. valuation (in terms of binary values) : (base)**following
+    2. this is a common problem that occurs when 
+    the output is out of the limits of the datatype container size.
+
+
+
+9. literals
+    1. fixed values embedded in the code
+    2. carry a certain interpretation
+    3. types
+        1. decimal literals : underscores allowed, NeX allowed
+        2. hexadecimal literals : start with 0x
+        3. address literals : hexadecimals that follow eip55 address checksum
+        4. string literals : "....."
+        5. boolean literal : true/false
+        6. unicode literal : unicode"....."
+
+
+
+10. inline assembly and opcodes
+    1. execution 
+        - opcodes : area, operation, params(location, value), output
+        - yul manages stack for us, devs manage memory and storage
+    2. memory 
+        - structure : byte addressable array
+        - scratch space 
+            0x00 : a 32 byte slot 
+            0x20 : a 32 byte slot 
+        - Free memory pointer
+            0x40 : this contains location to a free memory
+        - zero slot
+            0x60 : zero slot, used as default value for uninitialized variables
+    3. storage 
+        - structure
+            - mapping of 32-byte keys(storage-slots) to a 32-byte values
+            - storage slots start at slot 0
+        - rules
+            [1] If the next value can fit into the same slot (determined by type), it is right-aligned in the same slot, else it is stored in the next slot.
+            2 Immutable and constant values are not written to storage, therefore they do not increment the storage slot count.
+            3 Storage slots of a parent contract precedes the child in the order of inheritance.
+            4 mapping value slot : keccak256(abi.encode(key,declaration slot))
+            5 arrays : A dynamically sized array stores the current length in its slot, then its elements are stored sequentially from Keccak-256 hash of the slot number.         
+            6 byte arrays and strings : Byte arrays and strings are stored the same way as other dynamic arrays unless the length is 31 or less. 
+            Then it is packed into one slot and the right-most byte is occupied by two times the length.
+    
+
+
+
+11. Gas
+    1. gas is a commodity like petrol is for bike
+    2. gas has to be bought in ETH
+    3.
+
+
+
+12. accounts
+
+
+
+13. txns and messages
+
+
+
+
+14. mempool
+
+
+
+15. blocks
+
+
+
+16. consensus
+
+
+
+17. L1, L2s and scalability trilemma
+
 
 // types ------------------------------------------------------------------------------//
 // 1 native type
@@ -30,52 +137,9 @@
 // - uint256 and derivatives
 // - bool
 // - string
+-----------------
 
-// memory -----------------------------------------------------------------------------//
-// 1 memory structure
-// - byte addressable array but interaction in words (32 bytes from byte address )
-
-// 2 scratch space 
-// - 0x00 : a 32 byte slot 
-// - 0x20 : a 32 byte slot 
-
-// 3 Free memory pointer
-// - 0x40 : this contains location to a free memory
-
-// 4 zero slot
-// - 0x60 : zero slot, used as default value for uninitialized variables
-
-// storage ----------------------------------------------------------------------------//
-// 1 storage structure
-// - a series of mappings from 32-byte key(storage-slots) to a 32-byte value
-// - Storage layout starts at slot 0.
-// - The data is stored in the right-most byte(s).
-// - If the next value can fit into the same slot (determined by type), 
-//   it is right-aligned in the same slot, else it is stored in the next slot.
-// - Immutable and constant values are not in storage, 
-//   therefore they do not increment the storage slot count.
-// - Storage slots of a parent contract precedes the child in the order of inheritance.
-
-// 2 mapping value slot 
-// - keccak256(abi.encode(key,declaration slot))
-
-// 3 arrays 
-// - A dynamically sized array stores the current length in its slot, 
-//   then its elements are stored sequentially from Keccak-256 hash of the slot number.         
-
-// 4 byte arrays and strings 
-// - Byte arrays and strings are stored the same way as other dynamic arrays 
-//   unless the length is 31 or less. Then it is packed into one slot 
-//   and the right-most byte is occupied by two times the length.
-
-// gas costs --------------------------------------------------------------------------//
-// 1 optimization
-// - Oftentimes, gas-optimization is about reducing the number of 
-//   stack jugglings (push, pop, swap, duplicate etc), to achieve a given objective.
-// - time and space complexity should be optimized for gas consumption
-// - storage operations are the costliest
-
-// 2 opcode gas costs
+// 3 opcode gas costs
 // - sload
 // - store
 // - mload : supports local variables
@@ -116,6 +180,7 @@
 
 // 3 errors
 // - consist of a four byte error selector and the error data.
+// - reverts data only from the memory
 
 // global -----------------------------------------------------------------------------//
 // 1 return
@@ -139,9 +204,8 @@
 // for 
 // if
 // switch
+*/
 
-/////////////////////////////////////////////////////////////////////////////////////////
-/////////////////////////////////////////////////////////////////////////////////////////
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.17;
 

@@ -13,16 +13,25 @@ contract YulERC20Test is Test {
         c = new Cheatsheet();
     }
 
-    function test_toggle_status() public {
-        c.toggle();
-        assertEq(c.status(), true);
+    function test_1getCounter_sol() public {
+        assertEq(c.getCounter_sol(), 0);
     }
-    function test_setCounter_getCounter() public {
-        assertEq(c.getCounter(), 0);
-        c.setCounter(101);
-        assertEq(c.getCounter(), 101);
+    
+    function test_2getCounter_asm() public {
+        assertEq(c.getCounter_asm(), 0);
     }
-    function test_name_c() public {
+
+    function test_3setCounter_sol() public {
+        c.setCounter_sol(1000);
+    }
+    
+    function test_4setCounter_asm() public {
+        c.setCounter_asm(1000);
+    }
+
+
+
+    function test_name() public {
         assertEq(c.name(), "counting now");
     }
     function test_arraySum() public {

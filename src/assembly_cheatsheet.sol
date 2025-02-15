@@ -1,14 +1,73 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.17;
 
-contract Parent{
-    /* slot: 0 */ bool internal _pause; 
-    /* slot: 1 */ uint256 internal _counter; 
+contract Slot0_And_Slot1{
+    /* slot: 0 */ uint256 internal _counter; 
+    /* slot: 1 */ bytes4 internal _hexInfo;
+    
 }
 
 /// @author 0xAtharva
 /// @notice practical usage cheatsheet of inline assembly (educational purposes only)
-contract Cheatsheet is Parent {
+contract Cheatsheet is Slot0_And_Slot1 {
+    /* slot: 2 */ address internal alice;
+    /* slot: 3 */ string internal _name = "counting now"; 
+    /* slot: 4 */ bool internal _pause; 
+    
+    /* slot: 5 */ uint256[] internal _a = [71,2,3];
+    /* slot: 6 */ mapping(address => uint256) register;
+
+
+    
+    function setCounter_sol(uint256 val) public {
+        _counter = val;
+    }
+
+    function setCounter_asm(uint256 val) public {
+        assembly {
+            sstore(0x00, val)
+        }
+    }
+
+    function getCounter_sol() view public returns(uint256) {
+        return _counter;
+    }
+
+    //reading and returning uint256 from storage
+    function getCounter_asm() view public returns(uint256 result) {
+        assembly{
+            result := sload(0)
+        }
+    }
+
+    //reading and returning strings from storage
+    function name() view public returns(string memory) {
+        assembly{
+            let n := sload(2)
+            let memptr := mload(0x40)
+            mstore(memptr,0x20)
+            mstore(add(memptr,0x20),12)
+            mstore(add(memptr,0x40),n)
+            return(memptr,0x60)
+        }
+    }
+
+    // memory array sum (loops)
+    // notice that memory arrays are fixed size
+    function arraySum(uint256[] memory a) pure public returns(uint256) {
+        assembly {
+            let sum
+            let l := mload(a)
+            for { let i:= 0 } lt(i,l) { i := add(i,1) }{
+                sum := add(sum, mload(add(add(a,0x20),mul(i,0x20))))
+            }
+            let memptr := mload(0x40)
+            mstore(memptr,sum)
+            return(memptr,0x20)
+        }
+    }
+    
+    /********************* EVM architecture notes **************************/
     /*
     1. bits 
         1. a single transistor thats on(1) or off(0)
@@ -120,6 +179,7 @@ contract Cheatsheet is Parent {
             - trivia
                 - takes in the external calldata input to the functions
         4. transient storage
+            - persists across the txn
             - opcodes : tload, tstore
             - inline assembly : 
         5. stack
@@ -135,115 +195,447 @@ contract Cheatsheet is Parent {
             2 all addresses start with zero (0x00)
         [7] opcodes 
             1 details
-                - SLOAD
-                - SSTORE
-                - MLOAD : 
-                - MSTORE
-                - MSTORE8
-                - CALLDATALOAD
-                - CALLDATACOPY
-                - CREATE
-                - CREATE2
-                - RETURN
-                - CALL
-                - DELEGATECALL
-                - STATICCALL
-                - CALLER
-                - ADD
-                - SUB
-                - MUL
-                - DIV
-                - LT
-                - GT
-                - EQ
-                - SHR
-                - SHL
-                - PUSHx : push the next x bytes(0-32) of data to the stack
-                - DUPx : duplicate the xth(1-16) value on the stack
-                - POP : remove item from the stack 
-                - EXTCODESIZE : get size of an account's code
-                - JUMP
-                - JUMPI
-                - JUMPDEST
+                - SSTORE 100
+                - SLOAD 100
+                - MSTORE 3
+                - MSTORE8 3
+                - MLOAD  3
+                - MCOPY 3
+                - CALLDATALOAD 3
+                - CALLDATACOPY 3
+                - TLOAD 100
+                - TSTORE 100
+                - CALL 100
+                - DELEGATECALL 100
+                - STATICCALL 100
+                - REVERT 0
+                - RETURN 0
+                - CREATE 32000
+                - CREATE2 32000
+                - CALLER 2
+                - GAS 2
+                - TIMESTAMP 2
+                - NUMBER 2
+                - PREVRANDAO 2
+                - GASLIMIT 2
+                - CHAINID 2
+                - SELFBALANCE 5
+                - BASEFEE 2
+                - ADD 3
+                - SUB 3
+                - MUL 5
+                - DIV 5
+                - LT 3
+                - GT 3
+                - EQ 3
+                - SHR 3
+                - SHL 3
+                - LOG0 375
+                - LOG1 750
+                - LOG2 1125
+                - LOG3 1500
+                - LOG4 1875
+                - PUSH0 2
+                - PUSHx 3 : push the next x bytes(1-32) of data to the stack
+                - DUPx 3 : duplicate the xth(1-16) value on the stack
+                - POP 2 : remove item from the stack 
+                - EXTCODESIZE 100 : get size of an account's code
+                - JUMP 8
+                - JUMPI 10
+                - JUMPDEST 1 
             2 trivia
                 - 1 byte in lenght (two hex characters long)
                 - opcodes may take input from stack or have it hardcoded in contract bytecode
+                - there is warm and cold about opcode operations
+                - the gas pricing is dynamic
         [8] inline assembly(yul)
             syntax
                 - assembly{...}
                 - :=  assignment
                 - no use of semicolons
-                - scoping rule : variables only avialable in the scope of the assembly block*/
-            function components() pure public {
-                assembly {
-                /*-------------- variables -------------*/
-                let x := 100
-                // - all variables are local declared using let (no strict types in assembly cuz assembly is dealing with bytes, yul is making up those literals for us)
-                
-                /*-------------- logistics ---------------*/
-                // 1 calldata
-                // calldataload(offset bytes)
-                //     - pops off the 1st value on stack as input, uses that as an offset
-                //     - copy calldata bytes from the provided offset into memory
-            
-                // calldatacopy
-                
-                // 2 memory
-                // mload
-                
-                // mstore
-                
-                // mstore8
-                
-                // 3 storage
-                // sload
-                
-                // sstore
-                
-                // 4 stack
-                // pop
-                
-                // push
-                
-                // dup
-                
-                // swap
-                
-                // 5 return
-                //     - return can only read from memory, cant directly handle storage state vars
-                //     - returning strings: (ptr(0x20),length,data)
+                - yul manages stack for us, devs manage memory and storage*/
+            // Components ------------------------------------------------------------------//
+            // variables -*-*-*-*-
+            // - all variables are local declared using let (no strict types in assembly cuz assembly is dealing with bytes, 
+            //   yul is making up those literals for us)
+            // - variables declared inside assembly scope are not available outside
+            // - variables declared inside function but outside assemlby scope are avilable inside
+            function variables() pure public {
+                assembly{
+                    let memptr
+                    let x := 100
+                }
+            }
 
-                // ---------------- logs -----------------
-                // 1 events
-                //     - Events have up to four indexed topics.
-                //     - The first topic is always the Keccak-256 hash of the event signature.
-                //     - Non-indexed topics are logged by storing them in memory and passing to the log instruction a pointer to the start of the data and  
-                //     the length of the data.
-                // 2 log
-                //     - log0, log1, log2, log3, log4
-                // 2 errors
-                //     - consist of a four byte error selector and the error data.
-                //     - reverts data only from the memory
-                //     - revert
+            // mload -*-*-*-*-
+            // - reads the memory at given location
+            function mload() pure public { 
+                assembly {
+                    let memptr := mload(0x40)
+                }
+            }
+
+            // mstore -*-*-*-*-
+            // - stores the value at given location
+            function mstore() pure public {
+                assembly {
+                    let memptr := mload(0x40)
+                    mstore(memptr, 1000)
+                    mstore(0x40, add(memptr,0x20))
+                }
+            }
+
+            // mstore8 -*-*-*-*-
+            // - stores the 1 byte value at given location
+            function mstore8() pure public {
+                assembly {
+                    let memptr := mload(0x40)
+                    mstore8(memptr, "$")
+                    mstore(0x40, add(memptr,0x01))
+                }
+            }
+
+            // calldataload(p) -*-*-*-*-
+            // - reads calldata(32 bytes) from given location 
+            function calldataload(string calldata message) pure public {
+                assembly {
+                    let param := calldataload(0x04)
+                }
+            }
+
+            // calldatacopy(t,f,s) -*-*-*-*-
+            // - copy s bytes from calldata at position f to mem at position t
+            // - think of it as hybrid of calldataload and mstore
+            function calldatacopy(string calldata) pure public {
+                assembly {
+                    let memptr := mload(0x40)
+                    calldatacopy(memptr, 0, 32)
+                }
+            }
+
+            // sload(p) -*-*-*-*-
+            // - reads the storage at given location 
+            function sload() view public {
+                assembly {
+                    let success := sload(0)
+                }
+            }
+
+            // sstore(p,v) -*-*-*-*-
+            // - store the value at given location
+            function sstore() public {
+                assembly {
+                    sstore(5, 1005)
+                }
+            }
+
+            // return(p,s) -*-*-*-*-
+            // - end execution, return data mem[p…(p+s))
+            // - return can only read from memory
+            function Return() view public {
+                assembly {
+                    let memptr := mload(0x40)
+                    mstore(memptr, sload(5))
+                    let returnPosition := memptr
+                    mstore(0x40, add(memptr, 0x20))
+                    return(returnPosition, 0x20)
+                }
+            }
+
+            // logs (events) 
+            // - The first topic is always the Keccak-256 hash of the event signature.
+            // - Non-indexed topics are logged by storing them in memory and passing to the log instruction a pointer to the start 
+            //   of the data and the length of the data.
+            // - log0, log1, log2, log3, log4
+            function logs() pure public {
+                assembly {
+                    // log0(0x00, 0x00)
+                    // log1(0x00, 0x00, 0x00)
+                    // log2()
+                    // log3()
+                    // log4()
+                }
+            }
+
+            // errors 
+            // - consist of a four byte error selector and the error data.
+            // - reverts data only from the memory
+            // - revert
+            function Revert() pure public {
+                assembly {
+                    // revert()
                 }
             } 
+            
+            // Globals ------------------------------------------------------------------------------//
+            // types And Literals -*-*-*-*-
+            // - no strict types everything is let
+            // - all of the literals form solidity can be used here
+            function typesAndLiterals() pure public {
+                assembly {
+                    let x := 82                                             // Decimal
+                    let y := 0x2A                                           // Hexadecimal
+                    let addr := 0xdAC17F958D2ee523a2206206994597C13D831ec7  // address
+                    let z := "abc"                                          // String (stored as bytes)
+                    let success := true                                     // bool
+                }
+            }
 
-            function globals_asm() pure public {
-                assembly {/*
-                    1. for*/
+            // keccak256(mem[p,0x20]) 
+            // - start reading data from the address provided
+            function keccak256hash() pure public {
+                assembly {
+                    let memptr := mload(0x40)
+                    mstore(memptr, "msg")
+                    let hash := keccak256(memptr, 0x20)
+                    mstore(0x40, add(memptr, 0x20))
+                }
+            }
+
+            // eq 
+            // - returns 1 if equal, else 0
+            function eq(uint256 x, uint256 y) public pure returns(bool result) {
+                assembly {
+                    result := eq(x,y)
+                }
+            }
+
+            // add 
+            function add(uint256 x, uint256 y) public pure returns(uint256 result) {
+                assembly {
+                    result := add(x,y)
+                }
+            }
+            
+            // sub 
+            function sub(uint256 x, uint256 y) public pure returns(uint256 result) {
+                assembly {
+                    result := sub(x,y)
+                }
+            }
+
+            // mul 
+            function mul(uint256 x, uint256 y) public pure returns(uint256 result) {
+                assembly {
+                    result := mul(x,y)
+                }
+            }
+
+            // div 
+            function div(uint256 x, uint256 y) public pure returns(uint256 result) {
+                assembly {
+                    result := div(x,y)
+                }
+            }
+
+            // mod 
+            function mod(uint256 x, uint256 y) public pure returns(uint256 result) {
+                assembly {
+                    result := mod(x,y)
+                }
+            }
+
+            // exp 
+            function exp(uint256 x, uint256 y) public pure returns(uint256 result) {
+                assembly {
+                    result := exp(x,y)
+                }
+            }
+            
+            // signextend 
+            function signextend(uint256 x, uint256 y) public pure returns(uint256 result) {
+                assembly {
+                    result := signextend(x,y)
+                }
+            }
+
+            // gt 
+            function gt(uint256 x, uint256 y) public pure returns(bool result) {
+                assembly {
+                    result := gt(x,y)
+                }
+            }
+
+            // lt 
+            function lt(uint256 x, uint256 y) public pure returns(bool result) {
+                assembly {
+                    result := lt(x,y)
+                }
+            }
+
+            // slt 
+            function slt(uint256 x, uint256 y) public pure returns(bool result) {
+                assembly {
+                    result := slt(x,y)
+                }
+            }
+            
+            // sgt 
+            function sgt(uint256 x, uint256 y) public pure returns(bool result) {
+                assembly {
+                    result := sgt(x,y)
+                }
+            }
+
+            // iszero 
+            function iszero(uint256 x) public pure returns(bool result) {
+                assembly {
+                    result := iszero(x)
+                }
+            }
+
+            // and 
+            function and(uint256 x, uint256 y) public pure returns(uint256 result) {
+                assembly {
+                    result := and(x,y)
+                }
+            }
+
+            // or 
+            function or(uint256 x, uint256 y) public pure returns(uint256 result) {
+                assembly {
+                    result := or(x,y)
+                }
+            }
+
+            // xor 
+            function xor(uint256 x, uint256 y) public pure returns(uint256 result) {
+                assembly {
+                    result := xor(x,y)
+                }
+            }
+
+            // not 
+            function not(uint256 x) public pure returns(uint256 result) {
+                assembly {
+                    result := not(x)
+                }
+            }
+
+            // shl 
+            function shl(uint256 x, uint256 y) public pure returns(uint256 result) {
+                assembly {
+                    result := shl(x,y)
+                }
+            }
+
+            // shr 
+            function shr(uint256 x, uint256 y) public pure returns(uint256 result) {
+                assembly {
+                    result := shr(x,y)
+                }
+            }
+
+            // sar 
+            function sar(uint256 x, uint256 y) public pure returns(uint256 result) {
+                assembly {
+                    result := sar(x,y)
+                }
+            }
+
+            // ecrecover -*-*-*-*-
+            // - returns the address recovered from the signature
+            // - ecrecover(h, v, r, s)
+            function Ecrecover() pure public returns(address result){
+                assembly {
+                    // let memptr := mload(0x40)
+                    // mstore(memptr, 0x00)
+                    // mstore(add(memptr,0x20), 0x00)
+                    // mstore(add(memptr,0x40), 0x00)
+                    // mstore(add(memptr,0x60), 0x00)
+                    // result := ecrecover(memptr, 0x00, 0x00, 0x00)
+                }
+            }
+
+            // call 
+            // - returns 1 if success, else 0
+            // - call(forward all gas, target address, eth value, input pointer, input size, out pointer, output size)
+            function call() public {
+                assembly {
+                    let success := call(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00)
+
+                    if iszero(success) {
+                        returndatacopy(0, 0, returndatasize())
+                        revert(0, returndatasize())
+                    }
+                }
+            }
+
+            // delegatecall 
+            // - returns 1 if success, else 0
+            // - delegatecall(forward all gas, target address, input pointer, input size, out pointer, output size)
+            function delegatecall() public {
+                assembly {
+                    let success := delegatecall(0x00, 0x00, 0x00, 0x00, 0x00, 0x00)
+                }
+            }
+            
+            // extcodesize 
+            function extcodesize() view public {
+                assembly {
+                    let size := extcodesize(0x00)
+                }
+            }
+
+            // gas remaining 
+            function gas() view public {
+                assembly {
+                    let _gas := gas()
+                }
+            }
+
+            function caller() view public {
+                assembly {
+                    let _caller := caller()
+                }
+            }
+            // create 
+            // - 
+            function create(bytes memory code) public returns (address) {
+                address deployed;
+                assembly {
+                    deployed := create(0, add(code, 0x20), mload(code))
+                    if iszero(deployed) {
+                        revert(0, 0)
+                    }
+                }
+                return deployed;
+            }
+
+            // create2 
+            // - 
+            function create2() public {
+                assembly {
+                    let success := create2(0x00, 0x00, 0x00, 0x00)
+                }
+            }
+
+            // for loop 
+            function forLoop() pure public {
+                assembly {
                     for { let i := 0 } lt(i, 10) { i := add(i, 1) } {
-                        //...
-                    }/*
+                        // loop body 
+                    }
+                }
+            }
 
-                    2. if else*/
+            // if else 
+            // - 
+            function ifElse() pure public {
+                assembly {
                     let a := 10
                     if eq(a, 10) {
-                        //...
-                    } {/*
-                        notice that there is no mention of else in else block*/
-                    }/*
+                        // if body
+                    } {
+                        // notice that there is no mention of else in else block
+                    }
+                }
+            }
 
-                    3. switch*/
+            // switch 
+            // - 
+            function switchCase() pure public {
+                assembly {
                     let k := 0
                     switch k
                     case 0 {
@@ -251,89 +643,12 @@ contract Cheatsheet is Parent {
                     }
                     default {
                         // Default case
-                    }/*
-
-                    6 control flow
-                    jump
-                    
-                    jumpi
-                    
-                    jumpdest
-
-                    4. types And Literals*/
-                    let x := 42                                             // Decimal
-                    let y := 0x2A                                           // Hexadecimal
-                    let addr := 0xdAC17F958D2ee523a2206206994597C13D831ec7  //address
-                    let z := "abc"                                          // String (stored as bytes)
-                    let success := true/*                                   // bool
-                    - no strict types everything is let
-                    - all of the literals form solidity can be used here
-
-                    5 keccak hash*/
-                    /*
-                    - start reading data from the address provided*/
-
-                    // 6 call
-
-                    // 7 delegatecall
-                    
-                    // 8 extcodesize
-
-                    // 9 create, create2
-
-                    /*7 arithmetic
-                    add
-                    
-                    sub
-                    
-                    mul
-                    
-                    div
-                    
-                    mod
-                    
-                    exp
-                    
-                    signextend
-                    
-                    eq
-                    
-                    gt
-                    
-                    lt
-                    
-                    slt
-                    
-                    sgt
-                    
-                    iszero
-                    
-                    8 bitwise
-                    and
-                    
-                    or
-                    
-                    xor
-                    
-                    not
-                    
-                    shl
-                    
-                    shr
-                    
-                    sar
-                    
-                    9 precompiles
-                        - ecrecover, sha256, ripemd160, identity, modexp, alt_bn128_add, alt_bn128_mul, alt_bn128_pairing*/
+                    }
                 }
-            }/*
-            trivia 
-                - yul manages stack for us, devs manage memory and storage
+            }
 
 
-
-
-    [11] Gas
+    /*[11] Gas
         1. what is gas
             - a resource metering system
             - gas is a commodity like petrol is for bike 
@@ -391,7 +706,7 @@ contract Cheatsheet is Parent {
 
 
 
-    [13] txns and messages
+    13. txns and messages
         1. trxns 
             - a special message that is initiated by user accounts
             - components : RLPdata<nonce, gasPrice, startGas, to, value, data>, v, r, s
@@ -399,10 +714,11 @@ contract Cheatsheet is Parent {
             - offchain systems can prove these reciepts to collect on-chain info.
         2. messages
             - has a context : msg.sender, msg.value, msg.data, msg.sig
+            - messages are the base of communication in ethereum
 
 
 
-    [14] mempool
+    14. mempool
         - txns are submitted here
         - external observers can scan for txns here
         - it is the battle ground for price wars
@@ -443,72 +759,4 @@ contract Cheatsheet is Parent {
         3. special upgrades
             - danksharding 
     */
-
-    /* slot: 2 */ string internal _name = "counting now"; 
-    /* slot: 3 */ uint256[] internal _a = [71,2,3];
-    /* slot: 4 */ mapping(address => uint256) register;
-
-    // reading bool from storage
-    function status() view public returns(bool){
-        assembly{
-            let memptr := mload(0x40)
-            mstore(memptr,sload(0))
-            return(memptr,0x20)
-        }
-    }
-    function toggle() public {
-        bool x = !_pause;
-        assembly{
-            sstore(0,x)
-        }
-    }
-    //storing uint256 in storage
-    function setCounter(uint256 val) public {
-        assembly{
-            // set the funds variable to amt
-            sstore(1, val)
-        }
-    }
-
-    //reading and returning uint256 from storage
-    function getCounter() view public returns(uint256) {
-        uint256 val;
-        assembly{
-            val := sload(1)
-            let freeMemPtr := mload(0x40)
-            mstore(freeMemPtr, val)
-
-            return(freeMemPtr, 0x20)
-        }
-    }
-
-    //reading and returning strings from storage
-    function name() view public returns(string memory) {
-        string memory n;
-        assembly{
-            let memptr := mload(0x40)
-            n := sload(2)
-            mstore(memptr,0x20)
-            mstore(add(memptr,0x20),12)
-            mstore(add(memptr,0x40),n)
-            return(memptr,0x60)
-        }
-    }
-
-    // memory array sum (loops)
-    // notice that memory arrays are fixed size
-    function arraySum(uint256[] memory a) pure public returns(uint256) {
-        uint256 sum;
-        assembly {
-            let l := mload(a)
-            for { let i:= 0 } lt(i,l) { i := add(i,1) }{
-                sum := add(sum, mload(add(add(a,0x20),mul(i,0x20))))
-            }
-        }
-        return sum;
-    }
-}
-
-contract GasOptimization {
-
 }

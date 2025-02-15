@@ -1,0 +1,3 @@
+YulERC20Test:test_1getCounter() (gas: 7791)
+YulERC20Test:test_2name() (gas: 9116)
+YulERC20Test:test_3arraySum() (gas: 8910)
